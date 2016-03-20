@@ -31,6 +31,10 @@ from pyclustering.utils import read_sample;
 
 import pyclustering.core.wrapper as wrapper;
 
+from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+
 class dbscan:
     """!
     @brief Class represents clustering algorithm DBSCAN.
@@ -56,6 +60,7 @@ class dbscan:
     __eps = 0;
     __sqrt_eps = 0;
     __neighbors = 0;
+    __starting_point
     
     __clusters = None;
     __noise = None;
@@ -65,20 +70,22 @@ class dbscan:
     
     __ccore = False;
     
-    def __init__(self, data, eps, neighbors, ccore):
+    def __init__(self, data, eps, neighbors, ccore, starting_point):
         """!
         @brief Constructor of clustering algorithm DBSCAN.
         
-        @param[in] data (list): Input data that is presented as list of points (objects), each point should be represented by list or tuple.
+        @param[in] data (list): Input data that is presented as list of points (objects), each point should be represented by list or tuple. It should be on the form (id, long, lat, radius)
         @param[in] eps (double): Connectivity radius between points, points may be connected if distance between them less then the radius.
         @param[in] neighbors (uint): minimum number of shared neighbors that is required for establish links between points.
         @param[in] ccore (bool): if True than DLL CCORE (C++ solution) will be used for solving the problem.
+        @param[in] starting_point (tuple): starting_point to consider when creating clusters
         
         """
         self.__pointer_data = data;
         self.__eps = eps;
         self.__sqrt_eps = eps * eps;
         self.__neighbors = neighbors;
+        self.__starting_point;
         
         self.__visited = [False] * len(self.__pointer_data);
         self.__belong = [False] * len(self.__pointer_data);
@@ -96,23 +103,23 @@ class dbscan:
         @see get_noise()
         
         """
-        
-        if (self.__ccore is True):
+        #TODO: implement this in C++ as well.
+        '''if (self.__ccore is True):
             result = wrapper.dbscan(self.__pointer_data, self.__eps, self.__neighbors, True);
             self.__clusters = result[0];
             self.__noise = result[1];
             
             del result;
-        else:
-            for i in range(0, len(self.__pointer_data)):
-                if (self.__visited[i] == False):
-                     
-                    cluster = self.__expand_cluster(i);    # Fast mode
-                    if (cluster != None):
-                        self.__clusters.append(cluster);
-                    else:
-                        self.__noise.append(i);
-                        self.__belong[i] = True;       
+        else:'''
+        for i in range(0, len(self.__pointer_data)):
+            if (self.__visited[i] == False):
+                 
+                cluster = self.__expand_cluster(i);    # Fast mode
+                if (cluster != None):
+                    self.__clusters.append(cluster);
+                else:
+                    self.__noise.append(i);
+                    self.__belong[i] = True;       
 
 
     def get_clusters(self):
@@ -194,5 +201,6 @@ class dbscan:
         
         """
         
+        return [i for i in range(0, len(data))] if point.location.distance(self.__starting_point) <= point.radius and #bvadr
         # return [i for i in range(0, len(data)) if euclidean_distance(data[point], data[i]) <= eps and data[i] != data[point]];    # Slow mode
-        return [i for i in range(0, len(self.__pointer_data)) if euclidean_distance_sqrt(self.__pointer_data[point], self.__pointer_data[i]) <= self.__sqrt_eps and self.__pointer_data[i] != self.__pointer_data[point]]; # Fast mode
+        #return [i for i in range(0, len(self.__pointer_data)) if euclidean_distance_sqrt(self.__pointer_data[point], self.__pointer_data[i]) <= self.__sqrt_eps and self.__pointer_data[i] != self.__pointer_data[point]]; # Fast mode
